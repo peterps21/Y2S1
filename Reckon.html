@@ -1,0 +1,546 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Reckon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<style>
+  /* Layout: sticky header with the wordmark and subject lists as tabs; below it an add form, a one-line "how you estimate" readout, then tasks grouped by day. Black and white only. */
+  :root {
+    --bg: #ffffff;
+    --ink: #0a0a0a;
+    --mute: #6b6b6b;
+    --line: #dcdcdc;
+    --faint: #f3f3f3;
+    --serif: "Instrument Serif", "Times New Roman", Georgia, serif;
+    --sans: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0a0a0a; --ink: #f5f5f5; --mute: #9a9a9a; --line: #2b2b2b; --faint: #141414;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0a0a0a; --ink: #f5f5f5; --mute: #9a9a9a; --line: #2b2b2b; --faint: #141414;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.45 var(--sans);
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 0 80px;
+  }
+  body::before {
+    content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+    z-index: 10; background: var(--bg);
+  }
+  button, input, select, textarea { font: inherit; color: inherit; }
+  :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  /* Header + subject lists */
+  .bar {
+    position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+    background: var(--bg); border-bottom: 1px solid var(--ink); padding: 14px 0 12px;
+  }
+  .bar-top { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .bar h1 { margin: 0; font: 400 34px/1 var(--serif); letter-spacing: -0.015em; }
+  .sync { font: 400 11px var(--mono); color: var(--mute); }
+  .tabs { display: flex; gap: 6px; overflow-x: auto; padding: 12px 0 2px; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: none; cursor: pointer; background: none; border: 1px solid var(--ink);
+    padding: 6px 12px; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase;
+    display: inline-flex; gap: 8px; align-items: baseline;
+  }
+  .tab .n { color: var(--mute); font-weight: 400; }
+  .tab[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+  .tab[aria-pressed="true"] .n { color: var(--bg); opacity: .65; }
+  .tab.plus { border-style: dashed; }
+  .tabs input { flex: none; width: 130px; padding: 6px 10px; border: 1px solid var(--ink); background: var(--bg); font-size: 16px; border-radius: 0; }
+
+  /* Add form */
+  .adder { padding: 24px 0 18px; display: grid; gap: 12px; }
+  .adder .big {
+    width: 100%; padding: 12px 0; font: 400 26px/1.2 var(--serif); border: 0; border-bottom: 1px solid var(--ink);
+    background: none; border-radius: 0; letter-spacing: -0.01em;
+  }
+  .adder .big::placeholder { color: var(--mute); }
+  .adder .big:focus-visible { outline: none; border-bottom-width: 2px; }
+  .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+  label.f { display: grid; gap: 4px; min-width: 0; font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mute); }
+  .f input, .f select, .f textarea {
+    width: 100%; min-width: 0; padding: 9px 10px; font: 400 16px var(--sans); letter-spacing: 0; text-transform: none;
+    background: var(--bg); border: 1px solid var(--ink); border-radius: 0; color: var(--ink);
+  }
+  .exp-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .exp-row .lab { font: 500 10px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--mute); margin-right: 4px; }
+  .pill {
+    cursor: pointer; background: none; border: 1px solid var(--line); padding: 5px 10px;
+    font: 500 12px var(--mono); font-variant-numeric: tabular-nums;
+  }
+  .pill:hover { border-color: var(--ink); }
+  .pill[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .exp-row input { width: 84px; padding: 5px 8px; border: 1px solid var(--line); background: var(--bg); font: 500 12px var(--mono); border-radius: 0; }
+  .hint { min-height: 1.4em; font: 400 12px/1.4 var(--mono); color: var(--mute); }
+  .hint b { color: var(--ink); font-weight: 500; }
+  .btn {
+    cursor: pointer; background: none; border: 1px solid var(--ink); padding: 9px 18px;
+    font: 500 12px var(--mono); letter-spacing: .06em; text-transform: uppercase;
+  }
+  .btn.solid { background: var(--ink); color: var(--bg); }
+  .btn.quiet { border-color: var(--line); color: var(--mute); }
+  .add-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+  /* The reckoning readout */
+  .calib { border: 1px solid var(--ink); padding: 12px 14px; font-size: 14px; line-height: 1.5; margin-bottom: 8px; }
+  .calib .k { display: block; font: 500 10px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--mute); margin-bottom: 4px; }
+  .calib .r { font-family: var(--mono); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .calib ul { list-style: none; margin: 6px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+
+  /* Tasks */
+  .grp { padding-top: 26px; }
+  .grp-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; padding-bottom: 8px; border-bottom: 1px solid var(--ink); }
+  .grp-head h2 { margin: 0; font: 400 28px/1 var(--serif); letter-spacing: -0.01em; }
+  .grp-head .date { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--mute); }
+  .grp-head .tot { margin-left: auto; font: 400 12px var(--mono); color: var(--mute); text-align: right; font-variant-numeric: tabular-nums; }
+  .grp-head .tot b { color: var(--ink); font-weight: 500; }
+  .tasks { list-style: none; margin: 0; padding: 0; }
+  .task { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); align-items: start; }
+  .chk { position: relative; width: 20px; height: 20px; margin-top: 3px; padding: 0; cursor: pointer; background: none; border: 1.5px solid var(--ink); }
+  .chk::after { content: ""; position: absolute; inset: -9px; }
+  .task.done .chk { background: var(--ink); }
+  .task.done .chk::before { content: ""; position: absolute; left: 5px; top: 1px; width: 5px; height: 10px; border: solid var(--bg); border-width: 0 2px 2px 0; transform: rotate(45deg); }
+  .body { display: block; width: 100%; padding: 0; text-align: left; background: none; border: 0; cursor: pointer; min-width: 0; }
+  .text { display: block; font-size: 17px; font-weight: 500; overflow-wrap: anywhere; }
+  .meta { display: block; margin-top: 3px; font: 400 12px/1.5 var(--mono); color: var(--mute); font-variant-numeric: tabular-nums; }
+  .meta .s { text-transform: uppercase; letter-spacing: .08em; color: var(--ink); }
+  .meta .likely { color: var(--ink); border-bottom: 1px solid var(--ink); }
+  .task.done .text { text-decoration: line-through; }
+  .task.done .body { opacity: .5; }
+  .mv { cursor: pointer; background: none; border: 1px solid var(--line); padding: 4px 8px; font: 500 11px var(--mono); letter-spacing: .04em; text-transform: uppercase; color: var(--mute); }
+  .mv:hover { border-color: var(--ink); color: var(--ink); }
+
+  .panel { grid-column: 1 / -1; background: var(--faint); padding: 14px; margin: 0 -6px; display: grid; gap: 10px; }
+  .panel .q { font-size: 14px; font-weight: 500; }
+  .panel .row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .panel .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .panel .custom { width: 90px; padding: 6px 8px; border: 1px solid var(--ink); background: var(--bg); font: 500 14px var(--mono); border-radius: 0; }
+  .empty { padding: 36px 0; color: var(--mute); text-align: center; font-size: 14px; }
+  .empty b { display: block; font: 400 24px var(--serif); color: var(--ink); margin-bottom: 4px; }
+
+  .foot { max-width: 720px; margin: 36px auto 0; display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; }
+  .foot p { margin: 0; font-size: 12px; line-height: 1.5; color: var(--mute); max-width: 46ch; }
+
+  @media (max-width: 420px) {
+    .task { grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; }
+    .adder .big { font-size: 23px; }
+  }
+</style>
+
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <div class="bar-top">
+      <h1>Reckon</h1>
+      <span class="sync" id="sync" aria-live="polite"></span>
+    </div>
+    <nav class="tabs" id="tabs" aria-label="Subjects"></nav>
+  </header>
+
+  <main>
+    <form class="adder" id="adder" autocomplete="off">
+      <input class="big" id="a-text" type="text" placeholder="What are you going to do?" aria-label="Task">
+      <div class="fields">
+        <label class="f">Subject<select id="a-subj"></select></label>
+        <label class="f">When<input id="a-date" type="date"></label>
+        <label class="f">At (optional)<input id="a-time" type="time"></label>
+      </div>
+      <div class="exp-row" id="a-exp-row">
+        <span class="lab">I expect it to take</span>
+        <button type="button" class="pill" data-exp="15" aria-pressed="false">15</button>
+        <button type="button" class="pill" data-exp="30" aria-pressed="false">30</button>
+        <button type="button" class="pill" data-exp="60" aria-pressed="false">60</button>
+        <button type="button" class="pill" data-exp="90" aria-pressed="false">90</button>
+        <button type="button" class="pill" data-exp="120" aria-pressed="false">120</button>
+        <input id="a-exp" type="number" min="5" max="720" step="5" inputmode="numeric" placeholder="min" aria-label="Expected minutes">
+      </div>
+      <div class="hint" id="a-hint"></div>
+      <div class="add-actions">
+        <button class="btn solid" type="submit">Add task</button>
+        <button class="btn quiet" type="button" data-date="today">Today</button>
+        <button class="btn quiet" type="button" data-date="tomorrow">Tomorrow</button>
+      </div>
+    </form>
+
+    <section class="calib" id="calib" aria-live="polite"></section>
+    <section id="list"></section>
+  </main>
+
+  <div class="foot">
+    <p>Reckon compares how long you expect a task to take with how long it took, then corrects your next estimate for each subject. Everything stays on your device unless you are signed in on Claude.</p>
+    <button class="btn quiet" id="wipe" type="button">Clear all tasks</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var DEMO = false;                       // start with example tasks (set false for an empty list)
+  var LS = "reckon-v2";
+  var NEED = 3;                          // finished tasks with a logged time before a subject is corrected
+  var DEFAULT_SUBJECTS = ["EM3", "THT", "Dynamics", "PSM", "PM", "Bible", "Other"];
+  var DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var DOWL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  var MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+  function pad(n) { return ("0" + n).slice(-2); }
+  function ymd(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); }
+  function parse(s) { var p = s.split("-"); return new Date(+p[0], +p[1] - 1, +p[2]); }
+  function addDays(s, n) { var d = parse(s); d.setDate(d.getDate() + n); return ymd(d); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function uid() { return "t" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+  function fmt(m) {
+    m = Math.round(m);
+    if (m < 60) return m + "m";
+    var h = Math.floor(m / 60), r = m % 60;
+    return h + "h" + (r ? " " + r + "m" : "");
+  }
+  function short(s) { var d = parse(s); return DOW[d.getDay()] + " " + d.getDate() + " " + MON[d.getMonth()]; }
+  var today = ymd(new Date());
+
+  function seedTasks() {
+    var rows = [
+      [0, "EM3", "Math: Chapter 4 Part 3, all examples + tutorial", 120],
+      [0, "PM", "Tutorial + exam prep from Thursday", 60],
+      [0, "THT", "5-9, 5-7, then 5-10 with a fresh brain", 90],
+      [0, "Dynamics", "Weak-spot rework + perturbation practice", 60],
+      [1, "THT", "Lab procedure prep (lab is Monday)", 150],
+      [1, "THT", "Redo the property table tutorial, 1 to 6", 90],
+      [1, "Dynamics", "Redo old tutorials with AI: moment of inertia, velocity and acceleration", 120],
+      [1, "PSM", "Finish revising lectures 3 and 4 with AI", 90],
+      [2, "THT", "Prestudy Monday's lecture topic (fast pass)", 60],
+      [2, "EM3", "General practice, keep the daily habit alive", 30],
+      [2, "Other", "Self-test: weakest subject, closed book", 60]
+    ];
+    return rows.map(function (r) {
+      return { id: uid(), text: r[2], subj: r[1], date: addDays(today, r[0]), time: "", exp: r[3], act: 0, done: false };
+    });
+  }
+  function fresh() { return { v: 2, subjects: DEFAULT_SUBJECTS.slice(), tasks: DEMO ? seedTasks() : [] }; }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  var state = fresh();
+  try {
+    var c = JSON.parse(localStorage.getItem(LS) || "null");
+    if (c && c.tasks && c.subjects) state = c;
+  } catch (e) {}
+
+  var tab = "All", editing = null, logging = null, addingSubject = false, ST = {};
+  var $ = function (id) { return document.getElementById(id); };
+
+  /* ---- the reckoning: expected vs actual, per subject ---- */
+  function computeStats() {
+    var by = {};
+    state.tasks.forEach(function (t) {
+      if (t.done && t.act > 0 && t.exp > 0) {
+        var b = by[t.subj] || (by[t.subj] = { e: 0, a: 0, n: 0 });
+        b.e += t.exp; b.a += t.act; b.n += 1;
+      }
+    });
+    Object.keys(by).forEach(function (k) {
+      var r = by[k].a / by[k].e;
+      by[k].r = Math.min(3, Math.max(0.5, r));
+      by[k].ok = by[k].n >= NEED;
+    });
+    ST = by;
+  }
+  function ratio(subj) { var b = ST[subj]; return b && b.ok ? b.r : null; }
+  function likely(t) { var r = ratio(t.subj); return r ? Math.round(t.exp * r / 5) * 5 : t.exp; }
+  function x(r) { return "×" + (Math.round(r * 10) / 10).toFixed(1); }
+
+  /* ---- render ---- */
+  function openCount(s) { return state.tasks.filter(function (t) { return !t.done && (s === "All" || t.subj === s); }).length; }
+
+  function renderTabs() {
+    var h = ["All"].concat(state.subjects).map(function (s) {
+      return '<button type="button" class="tab" data-tab="' + esc(s) + '" aria-pressed="' + (tab === s) + '">' + esc(s) + ' <span class="n">' + openCount(s) + "</span></button>";
+    }).join("");
+    h += addingSubject
+      ? '<input id="new-subj" type="text" placeholder="New list" aria-label="New subject name" maxlength="20">'
+      : '<button type="button" class="tab plus" data-newsubj="1" aria-label="Add a subject list">+ List</button>';
+    $("tabs").innerHTML = h;
+    var sel = $("a-subj"), cur = sel.value;
+    sel.innerHTML = state.subjects.map(function (s) { return "<option>" + esc(s) + "</option>"; }).join("");
+    sel.value = tab !== "All" ? tab : (state.subjects.indexOf(cur) >= 0 ? cur : state.subjects[0]);
+    if (addingSubject) { var ni = $("new-subj"); if (ni) ni.focus(); }
+  }
+
+  function renderCalib() {
+    var el = $("calib"), keys = Object.keys(ST);
+    var logged = keys.reduce(function (a, k) { return a + ST[k].n; }, 0);
+    var html;
+    if (tab === "All") {
+      var ready = keys.filter(function (k) { return ST[k].ok; });
+      if (!ready.length) {
+        html = '<span class="k">How you estimate</span>Finish a few tasks and log how long they really took. After ' + NEED + ' per subject, Reckon starts correcting your estimates. ' +
+          (logged ? '<span class="r">' + logged + " logged so far.</span>" : "");
+      } else {
+        html = '<span class="k">How you estimate</span>Time taken compared with time expected:<ul>' + ready.map(function (k) {
+          return '<li>' + esc(k) + ' <span class="r">' + x(ST[k].r) + "</span></li>";
+        }).join("") + "</ul>";
+      }
+    } else {
+      var b = ST[tab];
+      if (b && b.ok) {
+        html = '<span class="k">' + esc(tab) + '</span>You take <span class="r">' + x(b.r) + "</span> as long as you expect (" + b.n + " logged). A 60m estimate here is likely about <span class=\"r\">" + fmt(Math.round(60 * b.r / 5) * 5) + "</span>.";
+      } else {
+        html = '<span class="k">' + esc(tab) + '</span>' + (b ? b.n : 0) + " of " + NEED + " finished tasks logged. Reckon needs " + NEED + " to start correcting this list.";
+      }
+    }
+    el.innerHTML = html;
+  }
+
+  function sorted(arr) {
+    return arr.map(function (t, i) { return { t: t, i: i }; }).sort(function (a, b) {
+      if (a.t.done !== b.t.done) return a.t.done ? 1 : -1;
+      var x1 = a.t.time || "99:99", y1 = b.t.time || "99:99";
+      if (x1 !== y1) return x1 < y1 ? -1 : 1;
+      return a.i - b.i;
+    }).map(function (o) { return o.t; });
+  }
+
+  function metaHTML(t, showDate) {
+    var p = ['<span class="s">' + esc(t.subj) + "</span>"];
+    if (showDate && t.date) p.push(short(t.date));
+    if (t.time) p.push(esc(t.time));
+    if (t.done) {
+      if (t.exp && t.act) {
+        var d = t.act - t.exp;
+        p.push("expected " + fmt(t.exp) + ", took " + fmt(t.act) + (d ? " (" + (d > 0 ? "+" : "−") + fmt(Math.abs(d)) + ")" : ""));
+      } else if (t.exp) p.push("expected " + fmt(t.exp));
+    } else if (t.exp) {
+      var l = likely(t);
+      p.push("expect " + fmt(t.exp));
+      if (l !== t.exp) p.push('<span class="likely">likely ~' + fmt(l) + "</span>");
+    }
+    return p.join(" · ");
+  }
+
+  function logHTML(t) {
+    var e = t.exp, opts = [e - 15, e, e + 15, e + 30, e * 2].filter(function (v, i, a) { return v >= 5 && a.indexOf(v) === i; });
+    return '<li class="task" style="display:block;padding:0;border:0"><div class="panel" style="margin:0 -6px"><div class="q">How long did it really take? You expected ' + fmt(e) + '.</div><div class="actions">' +
+      opts.map(function (v) { return '<button type="button" class="pill" data-log="' + v + '">' + fmt(v) + (v === e ? " as planned" : "") + "</button>"; }).join("") +
+      '</div><div class="actions"><input class="custom" id="log-custom" type="number" min="1" max="720" inputmode="numeric" placeholder="min" aria-label="Minutes taken">' +
+      '<button type="button" class="btn solid" data-logcustom="1">Log</button><button type="button" class="btn quiet" data-logskip="1">Done, skip logging</button></div></div></li>';
+  }
+
+  function editHTML(t) {
+    var so = state.subjects.map(function (s) { return "<option" + (s === t.subj ? " selected" : "") + ">" + esc(s) + "</option>"; }).join("");
+    return '<li class="task" style="display:block;padding:0;border:0"><div class="panel" style="margin:0 -6px">' +
+      '<label class="f">Task<input id="e-text" data-f="text" type="text" value="' + esc(t.text) + '"></label>' +
+      '<div class="row"><label class="f">Subject<select data-f="subj">' + so + '</select></label><label class="f">When<input data-f="date" type="date" value="' + esc(t.date) + '"></label></div>' +
+      '<div class="row"><label class="f">At<input data-f="time" type="time" value="' + esc(t.time) + '"></label><label class="f">Expected (min)<input data-f="exp" type="number" min="0" step="5" inputmode="numeric" value="' + (t.exp || "") + '"></label></div>' +
+      (t.done ? '<label class="f">Actual (min)<input data-f="act" type="number" min="0" inputmode="numeric" value="' + (t.act || "") + '"></label>' : "") +
+      '<div class="actions"><button type="button" class="btn solid" data-close="1">Done</button><button type="button" class="btn" data-del="' + t.id + '">Delete</button></div></div></li>';
+  }
+
+  function taskHTML(t, showDate) {
+    if (editing === t.id) return editHTML(t);
+    var out = '<li class="task' + (t.done ? " done" : "") + '"><button type="button" class="chk" data-chk="' + t.id + '" aria-pressed="' + !!t.done + '" aria-label="Mark done"></button>' +
+      '<button type="button" class="body" data-edit="' + t.id + '"><span class="text">' + esc(t.text || "Untitled") + '</span><span class="meta">' + metaHTML(t, showDate) + "</span></button>" +
+      (showDate && !t.done ? '<button type="button" class="mv" data-today="' + t.id + '">Move to today</button>' : "<span></span>") + "</li>";
+    if (logging === t.id) out += logHTML(t);
+    return out;
+  }
+
+  function renderList() {
+    var tasks = state.tasks.filter(function (t) { return tab === "All" || t.subj === tab; });
+    var over = tasks.filter(function (t) { return t.date && t.date < today && !t.done; });
+    var rest = tasks.filter(function (t) { return !(t.date && t.date < today); });
+    var byDate = {}, none = [];
+    rest.forEach(function (t) { if (t.date) (byDate[t.date] = byDate[t.date] || []).push(t); else none.push(t); });
+    var html = "";
+
+    function group(title, sub, arr, showDate) {
+      var open = arr.filter(function (t) { return !t.done && t.exp; });
+      var planned = open.reduce(function (a, t) { return a + t.exp; }, 0);
+      var lk = open.reduce(function (a, t) { return a + likely(t); }, 0);
+      var tot = open.length ? '<span class="tot">' + fmt(planned) + " planned" + (lk !== planned ? "<br><b>~" + fmt(lk) + " likely</b>" : "") + "</span>" : "";
+      return '<div class="grp"><div class="grp-head"><h2>' + title + "</h2>" + (sub ? '<span class="date">' + sub + "</span>" : "") + tot + '</div><ul class="tasks">' +
+        sorted(arr).map(function (t) { return taskHTML(t, showDate); }).join("") + "</ul></div>";
+    }
+
+    if (over.length) html += group("Overdue", over.length + " unfinished", over, true);
+    Object.keys(byDate).sort().forEach(function (d) {
+      var dt = parse(d), title = d === today ? "Today" : d === addDays(today, 1) ? "Tomorrow" : DOWL[dt.getDay()];
+      html += group(title, dt.getDate() + " " + MON[dt.getMonth()], byDate[d], false);
+    });
+    if (none.length) html += group("No date", "", none, false);
+    if (!html) html = '<div class="empty"><b>Nothing here yet.</b>Write a task above, say when and how long you expect it to take.</div>';
+    $("list").innerHTML = html;
+  }
+
+  function render() {
+    today = ymd(new Date());
+    computeStats();
+    renderTabs();
+    renderCalib();
+    renderList();
+    updateHint();
+  }
+
+  /* ---- add form ---- */
+  function updateHint() {
+    var s = $("a-subj").value, e = +$("a-exp").value, r = ratio(s), h = $("a-hint");
+    Array.prototype.forEach.call(document.querySelectorAll("#a-exp-row .pill"), function (b) { b.setAttribute("aria-pressed", String(+b.dataset.exp === e)); });
+    if (r && e) h.innerHTML = "On " + esc(s) + " you take about <b>" + x(r) + "</b> your estimate, so " + fmt(e) + " is likely <b>~" + fmt(Math.round(e * r / 5) * 5) + "</b>.";
+    else if (r) h.innerHTML = "On " + esc(s) + " you take about <b>" + x(r) + "</b> your estimate.";
+    else h.textContent = "";
+  }
+  $("a-date").value = today;
+
+  $("adder").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var text = $("a-text").value.trim();
+    if (!text) { $("a-text").focus(); return; }
+    state.tasks.push({ id: uid(), text: text, subj: $("a-subj").value, date: $("a-date").value, time: $("a-time").value, exp: Math.max(0, +$("a-exp").value || 0), act: 0, done: false });
+    $("a-text").value = ""; $("a-time").value = ""; $("a-exp").value = "";
+    markDirty(); render(); $("a-text").focus();
+  });
+  $("a-exp").addEventListener("input", updateHint);
+  $("a-subj").addEventListener("change", updateHint);
+
+  /* ---- events ---- */
+  function find(id) { return state.tasks.filter(function (t) { return t.id === id; })[0]; }
+
+  document.addEventListener("click", function (ev) {
+    var b = ev.target.closest("button");
+    if (!b) return;
+    var d = b.dataset, t;
+    if (d.exp && b.classList.contains("pill") && b.closest("#a-exp-row")) {
+      $("a-exp").value = +$("a-exp").value === +d.exp ? "" : d.exp; updateHint();
+    } else if (d.date) {
+      $("a-date").value = d.date === "today" ? today : addDays(today, 1);
+    } else if (d.tab) {
+      tab = d.tab; editing = null; logging = null; render();
+    } else if (d.newsubj) {
+      addingSubject = true; renderTabs();
+    } else if (d.chk) {
+      t = find(d.chk); if (!t) return;
+      if (t.done) { t.done = false; t.act = 0; markDirty(); render(); }
+      else if (t.exp > 0) { logging = logging === t.id ? null : t.id; editing = null; renderList(); var lc = $("log-custom"); if (lc) lc.focus(); }
+      else { t.done = true; markDirty(); render(); }
+    } else if (d.log || d.logcustom || d.logskip) {
+      t = find(logging); if (!t) return;
+      var v = d.log ? +d.log : d.logcustom ? +$("log-custom").value : 0;
+      if (d.logcustom && !(v > 0)) { $("log-custom").focus(); return; }
+      t.done = true; t.act = v > 0 ? v : 0; logging = null; markDirty(); render();
+    } else if (d.edit) {
+      editing = editing === d.edit ? null : d.edit; logging = null; renderList();
+      var ef = $("e-text"); if (ef) ef.focus();
+    } else if (d.close) {
+      var cur = find(editing);
+      if (cur && !cur.text.trim()) state.tasks = state.tasks.filter(function (z) { return z.id !== cur.id; });
+      editing = null; markDirty(); render();
+    } else if (d.del) {
+      state.tasks = state.tasks.filter(function (z) { return z.id !== d.del; }); editing = null; markDirty(); render();
+    } else if (d.today) {
+      t = find(d.today); if (t) { t.date = today; markDirty(); render(); }
+    } else if (b.id === "wipe") {
+      if (b.dataset.armed) {
+        state.tasks = []; editing = logging = null; b.dataset.armed = ""; b.textContent = "Clear all tasks"; markDirty(); render();
+      } else {
+        b.dataset.armed = "1"; b.textContent = "Tap again to clear";
+        setTimeout(function () { b.dataset.armed = ""; b.textContent = "Clear all tasks"; }, 4000);
+      }
+    }
+  });
+
+  $("list").addEventListener("input", function (ev) {
+    var f = ev.target.dataset && ev.target.dataset.f, t = find(editing);
+    if (!f || !t) return;
+    var v = ev.target.value;
+    t[f] = (f === "exp" || f === "act") ? Math.max(0, +v || 0) : v;
+    markDirty();
+  });
+  $("list").addEventListener("keydown", function (ev) {
+    if (ev.key === "Enter" && ev.target.id === "log-custom") { ev.preventDefault(); var lb = document.querySelector("[data-logcustom]"); if (lb) lb.click(); }
+    if (ev.key === "Enter" && ev.target.id === "e-text") { ev.preventDefault(); var cb = document.querySelector("[data-close]"); if (cb) cb.click(); }
+  });
+  $("tabs").addEventListener("keydown", function (ev) {
+    if (ev.target.id !== "new-subj") return;
+    if (ev.key === "Enter") {
+      var name = ev.target.value.trim();
+      if (name && state.subjects.indexOf(name) < 0) { state.subjects.push(name); tab = name; markDirty(); }
+      addingSubject = false; render();
+    } else if (ev.key === "Escape") { addingSubject = false; renderTabs(); }
+  });
+  $("tabs").addEventListener("focusout", function (ev) {
+    if (ev.target.id === "new-subj" && !ev.target.value.trim()) { addingSubject = false; renderTabs(); }
+  });
+
+  /* ---- saving: this device always; a private cloud copy when signed in on Claude ---- */
+  var syncEl = $("sync"), dbRef = null, dirty = false, saving = false, again = false, timer = null, lastSaved = JSON.stringify(state);
+  function setSync(t) { syncEl.textContent = t; }
+  function markDirty() {
+    dirty = true;
+    try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {}
+    setSync("Saving…");
+    clearTimeout(timer);
+    timer = setTimeout(flush, 600);
+  }
+  async function flush() {
+    if (saving) { again = true; return; }
+    saving = true;
+    try {
+      do {
+        again = false;
+        var s = JSON.stringify(state);
+        if (!dbRef) { setSync("Saved on this device"); continue; }
+        try { await dbRef.set(JSON.parse(s)); lastSaved = s; setSync("Saved"); }
+        catch (e) { setSync("Saved on this device only"); }
+      } while (again);
+    } finally { saving = false; dirty = false; }
+  }
+
+  render();
+
+  if (window.claude && window.claude.use) {
+    Promise.all([window.claude.use("db"), window.claude.use("user")]).then(async function (r) {
+      var db = r[0], user = r[1];
+      if (!db || !user) { setSync("Saved on this device"); return; }
+      var me = await user.me();
+      if (!me || !me.id) { setSync("Saved on this device"); return; }
+      dbRef = db.doc("data/users/" + me.id + "/state");
+      dbRef.onSnapshot(function (snap) {
+        if (snap.exists) {
+          var d = snap.data(), s = JSON.stringify(d);
+          if (d && d.tasks && d.subjects && s !== lastSaved && !dirty && !saving && !editing && !logging) {
+            state = clone(d); lastSaved = s; render();
+            try { localStorage.setItem(LS, JSON.stringify(state)); } catch (e) {}
+          }
+        }
+        if (!dirty) setSync("Saved");
+      }, function () { setSync("Saved on this device"); });
+    }).catch(function () { setSync("Saved on this device"); });
+  }
+})();
+</script>
+
+</body>
+</html>
+
+</body></html>
